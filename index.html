@@ -4,36 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VR Sinus Achterbahn</title>
-    <!-- A-Frame Bibliothek für WebVR -->
+    <!-- A-Frame Bibliothek -->
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <!-- WebXR Polyfill: Zwingt den Browser, VR-Funktionen zu simulieren (wichtig für Cardboard) -->
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.min.js"></script>
+    
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
         #start-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 999;
+            z-index: 9999;
             color: white;
             text-align: center;
         }
         button {
-            padding: 15px 30px;
-            font-size: 1.2rem;
+            padding: 20px 40px;
+            font-size: 1.5rem;
             background: #e91e63;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         .info {
             max-width: 600px;
             padding: 20px;
             line-height: 1.5;
+            font-size: 1.1rem;
+        }
+        .warning {
+            color: #ffcc00;
+            font-size: 0.9rem;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -43,20 +53,20 @@
     <div id="start-overlay">
         <h1>Mathe VR: Die Sinus-Bahn</h1>
         <div class="info">
-            <p>Erlebe die Steigung einer Sinusfunktion als Achterbahnfahrt.</p>
-            <p><strong>Anleitung:</strong><br>
-            1. Tippe auf "Starten" (Wechselt in VR Modus).<br>
-            2. Falls nicht automatisch: Tippe unten rechts auf das Brillen-Symbol.<br>
-            3. Lege das Handy quer in das Cardboard.</p>
+            <p>1. Halte das Handy <strong>QUER</strong> (Landscape).</p>
+            <p>2. Klicke auf "Starten".</p>
+            <p>3. Klicke unten rechts auf das <strong>VR-Symbol</strong>.</p>
         </div>
-        <button onclick="startExperience()">Starten & VR Modus</button>
+        <div class="warning">Hinweis: Funktioniert nur über HTTPS oder localhost!</div>
+        <button onclick="startExperience()">Starten</button>
     </div>
 
     <!-- Die 3D Szene -->
-    <!-- 'renderer' Optimierungen für schärferen Text in VR -->
+    <!-- vr-mode-ui aktiviert den VR Button. 'enterVR' Button wird von A-Frame gemanagt -->
     <a-scene background="color: #87CEEB" 
              fog="type: linear; color: #87CEEB; near: 10; far: 100"
-             renderer="antialias: true; colorManagement: true; sortObjects: true;">
+             renderer="antialias: true; colorManagement: true; sortObjects: true;"
+             vr-mode-ui="enabled: true">
         
         <!-- Assets Definition -->
         <a-assets>
@@ -75,7 +85,6 @@
             <a-entity id="camera" camera look-controls position="0 1.6 0">
                 
                 <!-- Visuelles Fadenkreuz (Reticle) -->
-                <!-- Hilft den Augen in VR zu fokussieren (Stereoskopischer Anker) -->
                 <a-entity cursor="fuse: false"
                           position="0 0 -1"
                           geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
@@ -83,7 +92,6 @@
                 </a-entity>
 
                 <!-- HUD: Heads-Up Display für Daten -->
-                <!-- Positioniert auf z = -2 für besseren Augenkomfort in VR -->
                 <a-entity position="0 -0.6 -2" geometry="primitive: plane; width: 2.2; height: 0.8" material="color: #000; opacity: 0.7">
                     <a-text id="hud-text" 
                             value="Lade..." 
@@ -107,10 +115,18 @@
     </a-scene>
 
     <script>
+        // --- WEBXR POLYFILL INITIALISIERUNG ---
+        // Das ist der Schlüssel für Handys ohne native VR Unterstützung
+        try {
+            const polyfill = new WebXRPolyfill();
+        } catch (e) {
+            console.log("Polyfill Fehler (kann ignoriert werden, wenn native VR vorhanden):", e);
+        }
+
         // --- KONFIGURATION DER FUNKTION ---
         const AMPLITUDE = 4; 
         const FREQUENCY = 0.3; 
-        const LENGTH = 200; // Länge der Strecke in Metern
+        const LENGTH = 200; 
         
         // Geschwindigkeit
         const BASE_SPEED = 0.1; 
@@ -128,12 +144,11 @@
             return AMPLITUDE * Math.sin(FREQUENCY * x);
         }
 
-        // Ableitung: f'(x) (Die Steigung)
+        // Ableitung: f'(x)
         function derive(x) {
             return AMPLITUDE * FREQUENCY * Math.cos(FREQUENCY * x);
         }
 
-        // Initialisierung: Baue die Strecke visuell auf
         function buildTrack() {
             const steps = 300; 
             const stepSize = LENGTH / steps;
@@ -172,23 +187,19 @@
             document.getElementById('start-overlay').style.display = 'none';
             buildTrack();
             isRunning = true;
-            
-            // Versuche direkt in den VR Modus zu wechseln (Browser-Richtlinien erfordern User-Interaktion)
-            if (scene.enterVR) {
-                scene.enterVR();
-            }
-            
             loop();
+            
+            // Hinweis an den User, falls VR nicht automatisch startet
+            // Wir versuchen nicht mehr den erzwungenen "scene.enterVR()", da dies oft von Browsern blockiert wird,
+            // wenn es nicht DIREKT im Event-Handler ist. Der User soll den VR Button nutzen.
         }
 
         function loop() {
             if (!isRunning) return;
 
-            // 1. Berechne aktuelle Werte
             let y = f(currentX);
-            let slope = derive(currentX); // Steigung m
+            let slope = derive(currentX); 
             
-            // 2. Physik-Simulation
             let velocity = BASE_SPEED - (slope * 0.03);
             if (velocity < 0.02) velocity = 0.02; 
             
@@ -197,24 +208,20 @@
             if (currentX > LENGTH) {
                 currentX = 0;
             }
-
-            // 3. Positioniere das Rig
-            let pitchRad = Math.atan(slope);
-            let pitchDeg = pitchRad * (180 / Math.PI);
-
+            
             rig.setAttribute('position', {
                 x: currentX, 
                 y: y, 
                 z: 0
             });
 
+            // Konstante Blickrichtung (kein Nicken, um Übelkeit zu vermeiden)
             rig.setAttribute('rotation', {
                 x: 0, 
-                y: -90, // Blickrichtung entlang X
-                z: pitchDeg // Neigung entsprechend Steigung
+                y: -90, 
+                z: 0 
             });
 
-            // 4. Update HUD Text
             let displayX = (currentX * FREQUENCY).toFixed(2); 
             let displayY = (y / AMPLITUDE).toFixed(2); 
             let displaySlope = (Math.cos(currentX * FREQUENCY)).toFixed(2);
