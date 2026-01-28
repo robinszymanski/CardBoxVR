@@ -45,15 +45,18 @@
         <div class="info">
             <p>Erlebe die Steigung einer Sinusfunktion als Achterbahnfahrt.</p>
             <p><strong>Anleitung:</strong><br>
-            1. Tippe auf "Starten".<br>
-            2. Tippe unten rechts auf das Brillen-Symbol (VR Modus).<br>
-            3. Lege das Handy in das Cardboard.</p>
+            1. Tippe auf "Starten" (Wechselt in VR Modus).<br>
+            2. Falls nicht automatisch: Tippe unten rechts auf das Brillen-Symbol.<br>
+            3. Lege das Handy quer in das Cardboard.</p>
         </div>
-        <button onclick="startExperience()">Starten</button>
+        <button onclick="startExperience()">Starten & VR Modus</button>
     </div>
 
     <!-- Die 3D Szene -->
-    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
+    <!-- 'renderer' Optimierungen für schärferen Text in VR -->
+    <a-scene background="color: #87CEEB" 
+             fog="type: linear; color: #87CEEB; near: 10; far: 100"
+             renderer="antialias: true; colorManagement: true; sortObjects: true;">
         
         <!-- Assets Definition -->
         <a-assets>
@@ -68,17 +71,24 @@
         <a-sky color="#87CEEB"></a-sky>
 
         <!-- Das "Fahrzeug" (Kamera-Rig) -->
-        <!-- Wir bewegen das Rig, die Kamera darin kann sich frei umschauen -->
         <a-entity id="rig" position="0 0 0">
             <a-entity id="camera" camera look-controls position="0 1.6 0">
                 
+                <!-- Visuelles Fadenkreuz (Reticle) -->
+                <!-- Hilft den Augen in VR zu fokussieren (Stereoskopischer Anker) -->
+                <a-entity cursor="fuse: false"
+                          position="0 0 -1"
+                          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                          material="color: black; shader: flat; opacity: 0.5">
+                </a-entity>
+
                 <!-- HUD: Heads-Up Display für Daten -->
-                <!-- Es ist an die Kamera gebunden ("geparented"), damit es sich mit dem Kopf bewegt -->
-                <a-entity position="0 -0.5 -1.5" geometry="primitive: plane; width: 1.8; height: 0.6" material="color: #000; opacity: 0.7">
+                <!-- Positioniert auf z = -2 für besseren Augenkomfort in VR -->
+                <a-entity position="0 -0.6 -2" geometry="primitive: plane; width: 2.2; height: 0.8" material="color: #000; opacity: 0.7">
                     <a-text id="hud-text" 
                             value="Lade..." 
                             align="center" 
-                            width="2.5" 
+                            width="3.5" 
                             position="0 0 0.01"
                             color="#FFF">
                     </a-text>
@@ -98,8 +108,6 @@
 
     <script>
         // --- KONFIGURATION DER FUNKTION ---
-        // Wir skalieren die Funktion, damit sie in VR beeindruckender wirkt.
-        // Mathematisch: f(x) = Amplitude * sin(Frequenz * x)
         const AMPLITUDE = 4; 
         const FREQUENCY = 0.3; 
         const LENGTH = 200; // Länge der Strecke in Metern
@@ -110,6 +118,7 @@
         let isRunning = false;
 
         // Referenzen auf DOM Elemente
+        const scene = document.querySelector('a-scene');
         const rig = document.getElementById('rig');
         const hud = document.getElementById('hud-text');
         const trackContainer = document.getElementById('track-container');
@@ -120,24 +129,19 @@
         }
 
         // Ableitung: f'(x) (Die Steigung)
-        // Ableitung von A * sin(B*x) ist A * B * cos(B*x)
         function derive(x) {
             return AMPLITUDE * FREQUENCY * Math.cos(FREQUENCY * x);
         }
 
         // Initialisierung: Baue die Strecke visuell auf
         function buildTrack() {
-            // Wir erzeugen viele kleine Zylinder oder Boxen entlang der Kurve
-            const steps = 300; // Anzahl der Segmente
+            const steps = 300; 
             const stepSize = LENGTH / steps;
 
             for (let i = 0; i < steps; i++) {
                 let x = i * stepSize;
                 let y = f(x);
-                let nextX = (i + 1) * stepSize;
-                let nextY = f(nextX);
-
-                // visuelle Schiene (einfache Sphären sind performanter als verbundene Meshes in reinem JS ohne ThreeJS Zugriff)
+                
                 let sleeper = document.createElement('a-box');
                 sleeper.setAttribute('position', {x: x, y: y - 0.5, z: 0});
                 sleeper.setAttribute('width', 0.8);
@@ -145,20 +149,17 @@
                 sleeper.setAttribute('depth', 0.5);
                 sleeper.setAttribute('color', '#FF5722');
                 
-                // Rotation der Schiene an die Steigung anpassen
                 let slope = derive(x);
-                let angle = Math.atan(slope); // Bogenmaß
+                let angle = Math.atan(slope);
                 let angleDeg = angle * (180 / Math.PI);
-                sleeper.setAttribute('rotation', {x: 0, y: 0, z: angleDeg}); // Z-Rotation für 2D-Ansicht von der Seite, aber wir fahren IN z oder x?
-                // Wir fahren entlang der X-Achse (World). Die Steigung ist eine Drehung um die Z-Achse.
+                sleeper.setAttribute('rotation', {x: 0, y: 0, z: angleDeg}); 
                 
                 trackContainer.appendChild(sleeper);
 
-                // Optionale Gitterlinien oder Stützen zum Boden
                 if (i % 5 === 0) {
                     let pillar = document.createElement('a-cylinder');
-                    let height = y + 5; // Bis zum Boden bei -5
-                    pillar.setAttribute('position', {x: x, y: (y - 5)/2 - 2.5, z: 0}); // Mitte finden
+                    let height = y + 5; 
+                    pillar.setAttribute('position', {x: x, y: (y - 5)/2 - 2.5, z: 0});
                     pillar.setAttribute('height', Math.abs(height));
                     pillar.setAttribute('radius', 0.1);
                     pillar.setAttribute('color', '#888');
@@ -171,6 +172,12 @@
             document.getElementById('start-overlay').style.display = 'none';
             buildTrack();
             isRunning = true;
+            
+            // Versuche direkt in den VR Modus zu wechseln (Browser-Richtlinien erfordern User-Interaktion)
+            if (scene.enterVR) {
+                scene.enterVR();
+            }
+            
             loop();
         }
 
@@ -181,67 +188,41 @@
             let y = f(currentX);
             let slope = derive(currentX); // Steigung m
             
-            // 2. Physik-Simulation (Simpel)
-            // Wenn wir bergauf fahren (slope > 0), werden wir langsamer.
-            // Wenn wir bergab fahren (slope < 0), werden wir schneller.
-            // Wir klemmen die Geschwindigkeit, damit wir nicht stehen bleiben oder unendlich schnell werden.
+            // 2. Physik-Simulation
             let velocity = BASE_SPEED - (slope * 0.03);
-            if (velocity < 0.02) velocity = 0.02; // Mindestgeschwindigkeit
+            if (velocity < 0.02) velocity = 0.02; 
             
             currentX += velocity;
 
-            // Loop resetten wenn am Ende
             if (currentX > LENGTH) {
                 currentX = 0;
             }
 
             // 3. Positioniere das Rig
-            // A-Frame Koordinaten: X ist rechts/links, Y ist hoch/runter, Z ist vor/zurück.
-            // Wir fahren entlang der X-Achse.
-            
-            // Steigungswinkel berechnen für die Kamera-Neigung (Pitch)
-            // Steigung m = tan(alpha) => alpha = arctan(m)
             let pitchRad = Math.atan(slope);
             let pitchDeg = pitchRad * (180 / Math.PI);
 
-            // Position Update
-            // Wir setzen y + 1.6 (Augenhöhe), damit wir AUF der Kurve sitzen
             rig.setAttribute('position', {
                 x: currentX, 
                 y: y, 
                 z: 0
             });
 
-            // Rotation Update
-            // Wenn die Steigung positiv ist (es geht hoch), müssen wir nach OBEN schauen (positive Z-Rotation in unserem Setup, da wir seitlich auf X schauen? Nein.)
-            // Normalerweise schauen wir in -Z. Wir bewegen uns aber in +X.
-            // Damit der Spieler nach vorne schaut, müssen wir das Rig initial drehen.
-            // Drehe Rig um Y um -90 Grad, damit "Vorne" = +X ist.
-            
-            // Korrektur: Wir lassen die Rotation im Loop berechnen.
-            // Wir wollen um die Z-Achse rotieren, um die Steigung darzustellen (Nase hoch/runter).
-            // Da wir entlang X fahren, ist die Steigung eine Rotation um Z.
             rig.setAttribute('rotation', {
                 x: 0, 
-                y: -90, // Wir schauen entlang der X-Achse
-                z: pitchDeg // Nase hoch/runter entsprechend der Steigung
+                y: -90, // Blickrichtung entlang X
+                z: pitchDeg // Neigung entsprechend Steigung
             });
 
             // 4. Update HUD Text
-            // Wir runden die Werte für bessere Lesbarkeit
-            let displayX = (currentX * FREQUENCY).toFixed(2); // Angepasstes X für "saubere" Mathe-Werte
-            let displayY = (y / AMPLITUDE).toFixed(2); // Normiertes Y (wie im Mathebuch sin(x))
-            let displaySlope = (Math.cos(currentX * FREQUENCY)).toFixed(2); // Die echte mathematische Steigung der Basisfunktion
-            
-            // Hinweis: Um die SuS nicht zu verwirren, zeigen wir die Werte der "idealen" sin(x) Funktion an,
-            // auch wenn wir in VR skalierte Werte für die Grafik nutzen.
-            
-            let colorSlope = slope > 0 ? '#00FF00' : (slope < 0 ? '#FF0000' : '#FFFFFF');
+            let displayX = (currentX * FREQUENCY).toFixed(2); 
+            let displayY = (y / AMPLITUDE).toFixed(2); 
+            let displaySlope = (Math.cos(currentX * FREQUENCY)).toFixed(2);
             
             hud.setAttribute('value', 
-                `Position x: ${displayX}\n` +
-                `Hoehe f(x): ${displayY}\n` + 
-                `Steigung m: ${displaySlope}`
+                `Pos x: ${displayX}\n` +
+                `f(x): ${displayY}\n` + 
+                `m: ${displaySlope}`
             );
 
             requestAnimationFrame(loop);
