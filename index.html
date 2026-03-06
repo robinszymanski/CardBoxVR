@@ -22,28 +22,40 @@
             z-index: 9999;
             color: white;
             text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto; /* Erlaubt Scrollen, falls der Bildschirm extrem klein ist */
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin: 10px 0;
         }
         button {
-            padding: 20px 40px;
-            font-size: 1.5rem;
+            padding: 15px 30px;
+            font-size: 1.2rem;
             background: #e91e63;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            margin-top: 20px;
+            margin-top: 15px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex-shrink: 0; /* Verhindert, dass der Button zusammengequetscht wird */
         }
         .info {
             max-width: 600px;
-            padding: 20px;
-            line-height: 1.5;
-            font-size: 1.1rem;
+            padding: 5px 10px;
+            line-height: 1.3;
+            font-size: 1rem;
+        }
+        .info p {
+            margin: 5px 0;
         }
         .warning {
             color: #ffcc00;
-            font-size: 0.9rem;
-            margin-top: 10px;
+            font-size: 0.85rem;
+            margin-top: 5px;
         }
     </style>
 </head>
