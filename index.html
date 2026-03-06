@@ -57,6 +57,21 @@
             font-size: 0.85rem;
             margin-top: 5px;
         }
+        
+        /* --- NEU: A-Frame VR-Button zentrieren und vergrößern --- */
+        .a-enter-vr {
+            position: absolute !important;
+            bottom: 40px !important; /* Abstand nach unten, um Browser-Leisten zu meiden */
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-50%) !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        .a-enter-vr-button {
+            transform: scale(1.5) !important; /* Macht den Button 50% größer */
+            transform-origin: bottom center !important;
+        }
     </style>
 </head>
 <body>
@@ -67,7 +82,7 @@
         <div class="info">
             <p>1. Halte das Handy <strong>QUER</strong> (Landscape).</p>
             <p>2. Klicke auf "Starten".</p>
-            <p>3. Klicke unten rechts auf das <strong>VR-Symbol</strong>.</p>
+            <p>3. Klicke unten mittig auf das <strong>VR-Symbol</strong>.</p>
         </div>
         <div class="warning">Hinweis: Funktioniert nur über HTTPS oder localhost!</div>
         <button onclick="startExperience()">Starten</button>
@@ -200,10 +215,6 @@
             buildTrack();
             isRunning = true;
             loop();
-            
-            // Hinweis an den User, falls VR nicht automatisch startet
-            // Wir versuchen nicht mehr den erzwungenen "scene.enterVR()", da dies oft von Browsern blockiert wird,
-            // wenn es nicht DIREKT im Event-Handler ist. Der User soll den VR Button nutzen.
         }
 
         function loop() {
